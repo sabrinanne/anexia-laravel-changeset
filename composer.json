@@ -5,13 +5,5 @@
     "license": "MIT",
     "autoload": {
         "psr-4": { "Anexia\\Changeset\\": "src" }
-    },
-    "scripts": {
-        "post-install-cmd": [
-            "php artisan vendor:publish --provider=\"Anexia\\Changeset\\Providers\\ChangesetServiceProvider\""
-        ],
-        "post-update-cmd": [
-            "php artisan vendor:publish --provider=\"Anexia\\Changeset\\Providers\\ChangesetServiceProvider\""
-        ]
     }
 }
