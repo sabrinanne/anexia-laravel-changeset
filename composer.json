@@ -1,0 +1,17 @@
+{
+    "name": "anexia/laravel-changeset",
+    "description": "A laravel module to monitor model changes and log them into the database",
+    "version": "1.0.0",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": { "Anexia\\Changeset\\": "src" }
+    }
+    //    "scripts": {
+    //        "post-install-cmd": [
+    //            "php artisan vendor:publish --provider=\"Anexia\\Monitoring\\Providers\\MonitoringServiceProvider\""
+    //        ],
+    //        "post-update-cmd": [
+    //            "php artisan vendor:publish --provider=\"Anexia\\Monitoring\\Providers\\MonitoringServiceProvider\""
+    //        ]
+    //    }
+}
