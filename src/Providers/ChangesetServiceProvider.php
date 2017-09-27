@@ -1,11 +1,11 @@
 <?php
-namespace Anexia\Monitoring\Providers;
+namespace Anexia\Changeset\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
 /**
- * Class MonitoringServiceProvider
- * @package Anexia\Monitoring\Providers
+ * Class ChangesetServiceProvider
+ * @package Anexia\Changeset\Providers
  */
 class ChangesetServiceProvider extends ServiceProvider
 {
