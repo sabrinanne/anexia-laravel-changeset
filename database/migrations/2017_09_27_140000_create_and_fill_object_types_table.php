@@ -21,6 +21,10 @@ class CreateAndFillObjectTypesTable extends Migration {
         Schema::drop('object_types');
     }
 
+    /**
+     * Iterate through all php files in /app and /vendor and
+     * store those that use the ChangesetTrackable trait as ObjectTypes
+     */
     public function fillObjectTypes()
     {
         $changesetTrait = \Anexia\Changeset\Traits\ChangesetTrackable::class;
@@ -30,37 +34,40 @@ class CreateAndFillObjectTypesTable extends Migration {
          */
         $classes = $this->findAllClasses();
         foreach ($classes as $class) {
-//            $traits = class_uses($class);
-//            $childClass = $class;
+            if (class_exists($class, false)) {
+                $traits = class_uses($class);
+                $childClass = $class;
 
-//            while ($parentClass = get_parent_class($childClass)) {
-//                $parentTraits = class_uses($parentClass);
-//                if (!empty($parentTraits)) {
-//                    $traits = array_unique(array_merge($traits, $parentTraits));
-//                }
-//
-//                $childClass = $parentClass;
-//            }
+                while ($parentClass = get_parent_class($childClass)) {
+                    $parentTraits = class_uses($parentClass);
+                    if (!empty($parentTraits)) {
+                        $traits = array_unique(array_merge($traits, $parentTraits));
+                    }
 
-//            if (isset($traits[$changesetTrait])) {
-//                $objectType = new \Anexia\Changeset\ObjectType();
-//                $objectType->name = $class;
-//                $objectType->save();
-//            }
+                    $childClass = $parentClass;
+                }
+
+                if (isset($traits[$changesetTrait])) {
+                    $objectType = new \Anexia\Changeset\ObjectType();
+                    $objectType->name = $class;
+                    $objectType->save();
+                }
+            }
         }
     }
 
     public function findAllClasses()
     {
-        $projectRoot = base_path();
-        $filenames = $this->getFileNames($projectRoot);
+        $appDir = base_path() . '/app';
+        $vendorDir = base_path() . '/vendor';
+        $appFilenames = $this->getFileNames($appDir);
+        $vendorFilenames = $this->getFileNames($vendorDir);
+
+        $filenames = array_merge($appFilenames, $vendorFilenames);
+
         $classes = [];
         foreach ($filenames as $filename) {
-            $className = $this->getFullNamespace($filename) . '\\' . $this->getClassName($filename);
-
-            if (class_exists($className)) {
-                $classes[] = $className;
-            }
+            $classes[] = $this->getFullNamespace($filename) . '\\' . $this->getClassName($filename);
         }
 
         return $classes;
