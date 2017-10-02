@@ -4,21 +4,24 @@ namespace Anexia\Changeset;
 
 use Illuminate\Database\Eloquent\Model;
 
-class ChangesetLoggableModel extends Model
+class ChangesetTrackableModel extends Model
 {
+    /** @var array */
+    protected $unloggable = [];
+
     protected static function boot()
     {
         parent::boot();
 
-        static::created(function(ChangesetLoggableModel $model) {
+        static::created(function(ChangesetTrackableModel $model) {
             $model->postCreate();
         });
 
-        static::updated(function(ChangesetLoggableModel $model) {
+        static::updated(function(ChangesetTrackableModel $model) {
             $model->postUpdate();
         });
 
-        static::deleted(function(ChangesetLoggableModel $model) {
+        static::deleted(function(ChangesetTrackableModel $model) {
             $model->postDelete();
         });
     }
