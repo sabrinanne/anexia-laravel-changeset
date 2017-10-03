@@ -9,16 +9,17 @@ class CreateChangerecordsTable extends Migration {
     {
         Schema::create('changerecords', function(Blueprint $table) {
             $table->increments('id');
-            $table->string('field_name', 255);
+            $table->string('field_name', 255)->nullable();
             $table->unsignedInteger('changeset_id');
             $table->text('display');
             $table->boolean('is_deletion')->default(0);
             $table->boolean('is_related')->default(0);
             $table->text('new_value')->nullable();
             $table->text('old_value')->nullable();
-            $table->text('related_display');
-            $table->unsignedInteger('related_object_type_id');
-            $table->string('related_object_uuid', 255);
+            $table->text('related_display')->nullable();
+            $table->unsignedInteger('related_object_type_id')->nullable();
+            $table->string('related_object_uuid', 255)->nullable();
+            $table->timestamps();
         });
     }
 

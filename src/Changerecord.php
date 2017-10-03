@@ -36,7 +36,7 @@ class Changerecord extends Model
 
     public function changeset()
     {
-        return $this->belongsTo('Anexia\Changeset\Changeset');
+        return $this->belongsTo(Changeset::class);
     }
 
     public function relatedObject()
@@ -46,6 +46,6 @@ class Changerecord extends Model
 
     public function relatedObjectType()
     {
-        return $this->belongsTo('Anexia\Changeset\ObjectType');
+        return $this->belongsTo(ObjectType::class);
     }
 }

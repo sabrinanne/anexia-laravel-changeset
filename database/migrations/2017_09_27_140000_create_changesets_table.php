@@ -9,7 +9,7 @@ class CreateChangesetsTable extends Migration {
     {
         Schema::create('changesets', function(Blueprint $table) {
             $table->increments('id');
-            $table->unsignedInteger('action_id');
+            $table->string('action_id', 255);
             $table->enum('changeset_type', array(
                 \Anexia\Changeset\Changeset::CHANGESET_TYPE_INSERT,
                 \Anexia\Changeset\Changeset::CHANGESET_TYPE_UPDATE,
@@ -20,7 +20,9 @@ class CreateChangesetsTable extends Migration {
             $table->boolean('is_related')->default(0);
             $table->unsignedInteger('object_type_id');
             $table->string('object_uuid', 255);
+            $table->unsignedInteger('related_changeset_id')->nullable();
             $table->unsignedInteger('user_id')->nullable();
+            $table->timestamps();
         });
     }
 

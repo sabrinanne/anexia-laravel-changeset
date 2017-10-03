@@ -17,6 +17,13 @@ class Changeset extends Model
     /** string */
     const CHANGESET_TYPE_DELETE = 'D';
 
+    /** string */
+    const CHANGESET_TYPE_LONG_INSERT = 'INSERT';
+    /** string */
+    const CHANGESET_TYPE_LONG_UPDATE = 'UPDATE';
+    /** string */
+    const CHANGESET_TYPE_LONG_DELETE = 'DELETE';
+
     protected $table = 'changesets';
     public $timestamps = true;
     protected $fillable = [
@@ -68,16 +75,39 @@ class Changeset extends Model
 
     public function changerecords()
     {
-        return $this->hasMany('Anexia\Changeset\Changerecord');
+        return $this->hasMany(Changerecord::class);
+    }
+
+    public function object()
+    {
+        die('get the object!!');
+    }
+
+    public function objectType()
+    {
+        return $this->belongsTo(ObjectType::class);
+    }
+
+    /**
+     * 'child' Changeset (triggered the 'parent' Changeset via ChangesetTrackable trait's $trackRelated)
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function relatedChangeset()
+    {
+        return $this->belongsTo(Changeset::class, 'related_changeset_id');
+    }
+
+    /**
+     * 'parent' Changesets (created after a child got changed)
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany
+     */
+    public function relatedChangesets()
+    {
+        return $this->hasMany(Changeset::class, 'related_changeset_id');
     }
 
     public function user()
     {
         return $this->belongsTo($this->userModelClass);
-    }
-
-    public function objectType()
-    {
-        return $this->belongsTo('Anexia\Changeset\ObjectType');
     }
 }

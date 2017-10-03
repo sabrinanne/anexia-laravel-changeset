@@ -1,24 +1,12 @@
 <?php
 
-use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Database\Seeder;
 
-class CreateAndFillObjectTypesTable extends Migration {
+class ChangesetObjectTypeSeeder extends Seeder {
 
-    public function up()
+    public function run()
     {
-        Schema::create('object_types', function(Blueprint $table) {
-            $table->increments('id');
-            $table->string('name', 255)->unique();
-            $table->timestamps();
-        });
-
         $this->fillObjectTypes();
-    }
-
-    public function down()
-    {
-        Schema::drop('object_types');
     }
 
     /**

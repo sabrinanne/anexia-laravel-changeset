@@ -12,15 +12,15 @@ class ObjectType extends Model
     protected $table = 'object_types';
     public $timestamps = true;
     protected $fillable = [
-        'class'
+        'name'
     ];
 
     protected $casts = [
-        'class' => 'string'
+        'name' => 'string'
     ];
 
     public function changersets()
     {
-        return $this->hasMany('Anexia\Changeset\Changerset');
+        return $this->hasMany(Changeset::class);
     }
 }
