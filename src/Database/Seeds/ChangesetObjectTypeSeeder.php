@@ -1,5 +1,8 @@
 <?php
 
+namespace Anexia\Changeset\Database\Seeds;
+
+use Anexia\Changeset\ObjectType;
 use Illuminate\Database\Seeder;
 
 class ChangesetObjectTypeSeeder extends Seeder {
@@ -17,12 +20,22 @@ class ChangesetObjectTypeSeeder extends Seeder {
     {
         $changesetTrait = \Anexia\Changeset\Traits\ChangesetTrackable::class;
 
+        $objectTypeNames = ObjectType::all()->pluck('name')->toArray();
+        if (!in_array(ObjectType::class, $objectTypeNames)) {
+            // make an entry for ObjectType class
+            $objectType = new \Anexia\Changeset\ObjectType();
+            $objectType->name = ObjectType::class;
+            $objectType->save();
+
+            $objectTypeNames[] = ObjectType::class;
+        }
+
         /**
          * Detect classes that use ChangesetTrackable trait
          */
         $classes = $this->findAllClasses();
         foreach ($classes as $class) {
-            if (class_exists($class, false)) {
+            if (class_exists($class, false) && !in_array($class, $objectTypeNames)) {
                 $traits = class_uses($class);
                 $childClass = $class;
 
@@ -39,6 +52,8 @@ class ChangesetObjectTypeSeeder extends Seeder {
                     $objectType = new \Anexia\Changeset\ObjectType();
                     $objectType->name = $class;
                     $objectType->save();
+
+                    $objectTypeNames[] = $class;
                 }
             }
         }

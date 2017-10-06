@@ -74,13 +74,12 @@ trait ChangesetTrackable
         $changeset = new Changeset();
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
-        $changeset->date = date('Y-m-d H:i:s');
         $changeset->objectType()->associate($objectType);
         $changeset->object_uuid = $model->id;
         $changeset->user()->associate($currentUser);
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
-            . ' at date ' . $changeset->date . ' by ' . $userName;
+            . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
         $changeset->save();
 
         foreach ($attributes as $fieldName => $newValue) {
@@ -108,7 +107,7 @@ trait ChangesetTrackable
      */
     public function newUpdateChangeset(Model $model)
     {
-        $objectType = ObjectType::firstOrNew(['name' => get_class($model)]);
+        $objectType = ObjectType::firstOrCreate(['name' => get_class($model)]);
         $currentUser = $this->getChangesetUser();
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : '';
         $actionId = uniqid();
@@ -118,13 +117,12 @@ trait ChangesetTrackable
         $changeset = new Changeset();
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
-        $changeset->date = date('Y-m-d H:i:s');
         $changeset->objectType()->associate($objectType);
         $changeset->object_uuid = $model->id;
         $changeset->user()->associate($currentUser);
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
-            . ' at date ' . $changeset->date . ' by ' . $userName;
+            . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
         $changeset->save();
 
         foreach ($attributes as $fieldName => $newValue) {
@@ -156,7 +154,7 @@ trait ChangesetTrackable
      */
     public function newDeletionChangeset(Model $model)
     {
-        $objectType = ObjectType::firstOrNew(['name' => get_class($model)]);
+        $objectType = ObjectType::firstOrCreate(['name' => get_class($model)]);
         $currentUser = $this->getChangesetUser();
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : '';
         $actionId = uniqid();
@@ -165,19 +163,13 @@ trait ChangesetTrackable
         $changeset = new Changeset();
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
-        $changeset->date = date('Y-m-d H:i:s');
         $changeset->objectType()->associate($objectType);
         $changeset->object_uuid = $model->id;
         $changeset->user()->associate($currentUser);
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
-            . ' at date ' . $changeset->date . ' by ' . $userName;
+            . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
         $changeset->save();
-
-        $changerecord = new Changerecord();
-        $changerecord->display = 'Deleted ' . $objectType->name  . ' ' . $model->id;
-        $changerecord->changeset()->associate($changeset);
-        $changerecord->save();
 
         if (!empty($model->trackRelated)) {
             // only create one changeset per each object (collect them to avoid duplicates)
@@ -199,7 +191,7 @@ trait ChangesetTrackable
     {
         foreach ($model->trackRelated as $parentRelation => $inverseRelation) {
             $parentClass = get_class($model->$parentRelation()->getModel());
-            $objectType = ObjectType::firstOrNew(['name' => $parentClass]);
+            $objectType = ObjectType::firstOrCreate(['name' => $parentClass]);
 
             switch (get_class($model->$parentRelation)) {
                 case Collection::class:
@@ -260,29 +252,26 @@ trait ChangesetTrackable
                                             $relation, ChangesetUserInterface $user = null, &$handledChanges = [])
     {
         $changesetType = Changeset::CHANGESET_TYPE_UPDATE;
-        $relatedObjectType = ObjectType::firstOrNew(['name' => get_class($childModel)]);
+        $relatedObjectType = ObjectType::firstOrCreate(['name' => get_class($childModel)]);
         $userName = $user instanceof ChangesetUserInterface ? $user->getUserName() : '';
 
         $changeset = new Changeset();
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
-        $changeset->date = date('Y-m-d H:i:s');
-        $changeset->is_related = true;
         $changeset->objectType()->associate($objectType);
         $changeset->object_uuid = $parentModel->id;
         $changeset->relatedChangeset()->associate($childChangeset);
         $changeset->user()->associate($user);
-        $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $parentModel->id
-            . ' at date ' . $changeset->date . ' after ' . $this->changesetTypesMap[$originalChangesetType] . ' '
-            . $relatedObjectType->name . ' ' . $childModel->id .  ' by ' . $userName;
+        $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' '
+            . $parentModel->id . ' at date ' . date('Y-m-d H:i:s') . ' after '
+            . $this->changesetTypesMap[$originalChangesetType] . ' ' . $relatedObjectType->name . ' '
+            . $childModel->id .  ' by ' . $userName;
         $changeset->save();
 
         $changerecord = new Changerecord();
-        $changerecord->field_name = $relation;
         $changerecord->changeset()->associate($changeset);
-        $changerecord->related_display = $childChangeset->display;
-        $changerecord->relatedObjectType()->associate($childChangeset->objectType);
-        $changerecord->related_object_uuid = $childChangeset->object_uuid;
+        $changerecord->field_name = $relation;
+        $changerecord->is_related = true;
 
         switch (get_class($parentModel->$relation)) {
             case Collection::class:
@@ -291,16 +280,26 @@ trait ChangesetTrackable
                     $relValues[] = ['id' => $rel->id];
                 }
 
-                $changerecord->display = 'Changed ' . $relation . ' associations to ' . json_encode($relValues);
+                if ($originalChangesetType == Changeset::CHANGESET_TYPE_INSERT) {
+                    $changerecord->display = 'Changed ' . $relation . ' associations to ' . json_encode($relValues);
+                } else if ($originalChangesetType == Changeset::CHANGESET_TYPE_DELETE) {
+                    $changerecord->display = 'Deleted ' . $relation . ' associations';
+                } else {
+                    $changerecord->display = 'Associated ' . $relation . ' still are ' . json_encode($relValues);
+                }
                 $changerecord->new_value = json_encode($relValues);
                 break;
 
             default:
                 if ($originalChangesetType == Changeset::CHANGESET_TYPE_DELETE) {
                     $changerecord->display = 'Deleted ' . $relation . ' association ' . $childModel->id;
+                    $changerecord->is_deletion = true;
                     $changerecord->new_value = null;
+                } else if ($originalChangesetType == Changeset::CHANGESET_TYPE_INSERT) {
+                    $changerecord->display = 'Set ' . $relation . ' association to ' . $childModel->id;
+                    $changerecord->new_value = $childModel->id;
                 } else {
-                    $changerecord->display = 'Changed ' . $relation . ' associations to ' . $childModel->id;
+                    $changerecord->display = 'Associated ' . $relation . ' still is ' . $childModel->id;
                     $changerecord->new_value = $childModel->id;
                 }
 

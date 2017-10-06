@@ -29,7 +29,6 @@ class Changeset extends Model
     protected $fillable = [
         'action_id',
         'changeset_type',
-        'date',
         'display',
         'object_type_id',
         'object_uuid',
@@ -39,7 +38,6 @@ class Changeset extends Model
     protected $casts = [
         'action_id' => 'integer',
         'changeset_type' => 'string',
-        'date' => 'datetime',
         'display' => 'string',
         'object_type_id' => 'integer',
         'object_uuid' => 'string',

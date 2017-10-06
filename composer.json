@@ -4,6 +4,8 @@
     "version": "1.0.0",
     "license": "MIT",
     "autoload": {
-        "psr-4": { "Anexia\\Changeset\\": "src" }
+        "psr-4": {
+            "Anexia\\Changeset\\": "src"
+        }
     }
 }

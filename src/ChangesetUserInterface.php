@@ -14,5 +14,5 @@ interface ChangesetUserInterface
      *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function changesets();
+    public function triggeredChangesets();
 }

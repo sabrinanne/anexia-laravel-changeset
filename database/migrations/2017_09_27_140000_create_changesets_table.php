@@ -15,9 +15,7 @@ class CreateChangesetsTable extends Migration {
                 \Anexia\Changeset\Changeset::CHANGESET_TYPE_UPDATE,
                 \Anexia\Changeset\Changeset::CHANGESET_TYPE_DELETE,
             )); // I = INSERT, U = UPDATE, D = DELETE
-            $table->date('date');
             $table->text('display');
-            $table->boolean('is_related')->default(0);
             $table->unsignedInteger('object_type_id');
             $table->string('object_uuid', 255);
             $table->unsignedInteger('related_changeset_id')->nullable();

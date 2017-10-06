@@ -15,10 +15,7 @@ class Changerecord extends Model
         'is_deletion',
         'is_related',
         'new_value',
-        'old_value',
-        'related_display',
-        'related_object_type_id',
-        'related_object_uuid'
+        'old_value'
     ];
 
     protected $casts = [
@@ -28,24 +25,11 @@ class Changerecord extends Model
         'is_deletion' => 'boolean',
         'is_related' => 'boolean',
         'new_value' => 'string',
-        'old_value' => 'string',
-        'related_display' => 'string',
-        'related_object_type_id' => 'integer',
-        'related_object_uuid' => 'string'
+        'old_value' => 'string'
     ];
 
     public function changeset()
     {
         return $this->belongsTo(Changeset::class);
-    }
-
-    public function relatedObject()
-    {
-        die('get related object');
-    }
-
-    public function relatedObjectType()
-    {
-        return $this->belongsTo(ObjectType::class);
     }
 }
