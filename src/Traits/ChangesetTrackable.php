@@ -25,6 +25,16 @@ trait ChangesetTrackable
         Changeset::CHANGESET_TYPE_DELETE => Changeset::CHANGESET_TYPE_LONG_DELETE
     ];
 
+    /**
+     * Get the changeset connection name.
+     *
+     * @return string
+     */
+    public function getChangesetConnection()
+    {
+        return config('database.changeset_default');
+    }
+
     protected static function bootChangesetTrackable()
     {
         static::created(function(Model $model) {
@@ -64,7 +74,10 @@ trait ChangesetTrackable
      */
     public function newCreationChangeset(Model $model)
     {
-        $objectType = ObjectType::firstOrCreate(['name' => get_class($model)]);
+        $oTModel = new ObjectType();
+        $oTModel->setConnection($this->getChangesetConnection());
+        $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
+
         $currentUser = $this->getChangesetUser();
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : '';
         $actionId = uniqid();
@@ -72,6 +85,7 @@ trait ChangesetTrackable
         $attributes = $model->attributes;
 
         $changeset = new Changeset();
+        $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
         $changeset->objectType()->associate($objectType);
@@ -85,6 +99,7 @@ trait ChangesetTrackable
         foreach ($attributes as $fieldName => $newValue) {
             if (in_array($fieldName, $this->trackFields)) {
                 $changerecord = new Changerecord();
+                $changerecord->setConnection($this->getChangesetConnection());
                 $changerecord->display = 'Set ' . $fieldName . ' to ' . $newValue;
                 $changerecord->field_name = $fieldName;
                 $changerecord->new_value = $newValue;
@@ -107,7 +122,10 @@ trait ChangesetTrackable
      */
     public function newUpdateChangeset(Model $model)
     {
-        $objectType = ObjectType::firstOrCreate(['name' => get_class($model)]);
+        $oTModel = new ObjectType();
+        $oTModel->setConnection($this->getChangesetConnection());
+        $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
+
         $currentUser = $this->getChangesetUser();
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : '';
         $actionId = uniqid();
@@ -115,6 +133,7 @@ trait ChangesetTrackable
         $attributes = $model->attributes;
 
         $changeset = new Changeset();
+        $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
         $changeset->objectType()->associate($objectType);
@@ -130,6 +149,7 @@ trait ChangesetTrackable
                 $oldValue = $model->original[$fieldName];
                 if ($newValue !== $oldValue) {
                     $changerecord = new Changerecord();
+                    $changerecord->setConnection($this->getChangesetConnection());
                     $changerecord->display = 'Changed ' . $fieldName . ' from ' . $oldValue . ' to ' . $newValue;
                     $changerecord->field_name = $fieldName;
                     $changerecord->new_value = $newValue;
@@ -154,13 +174,17 @@ trait ChangesetTrackable
      */
     public function newDeletionChangeset(Model $model)
     {
-        $objectType = ObjectType::firstOrCreate(['name' => get_class($model)]);
+        $oTModel = new ObjectType();
+        $oTModel->setConnection($this->getChangesetConnection());
+        $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
+
         $currentUser = $this->getChangesetUser();
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : '';
         $actionId = uniqid();
         $changesetType = Changeset::CHANGESET_TYPE_DELETE;
 
         $changeset = new Changeset();
+        $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
         $changeset->objectType()->associate($objectType);
@@ -191,7 +215,9 @@ trait ChangesetTrackable
     {
         foreach ($model->trackRelated as $parentRelation => $inverseRelation) {
             $parentClass = get_class($model->$parentRelation()->getModel());
-            $objectType = ObjectType::firstOrCreate(['name' => $parentClass]);
+            $oTModel = new ObjectType();
+            $oTModel->setConnection($this->getChangesetConnection());
+            $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
             switch (get_class($model->$parentRelation)) {
                 case Collection::class:
@@ -252,10 +278,14 @@ trait ChangesetTrackable
                                             $relation, ChangesetUserInterface $user = null, &$handledChanges = [])
     {
         $changesetType = Changeset::CHANGESET_TYPE_UPDATE;
-        $relatedObjectType = ObjectType::firstOrCreate(['name' => get_class($childModel)]);
+        $oTModel = new ObjectType();
+        $oTModel->setConnection($this->getChangesetConnection());
+        $relatedObjectType = $oTModel->firstOrCreate(['name' => get_class($childModel)]);
+
         $userName = $user instanceof ChangesetUserInterface ? $user->getUserName() : '';
 
         $changeset = new Changeset();
+        $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
         $changeset->objectType()->associate($objectType);
@@ -269,6 +299,7 @@ trait ChangesetTrackable
         $changeset->save();
 
         $changerecord = new Changerecord();
+        $changerecord->setConnection($this->getChangesetConnection());
         $changerecord->changeset()->associate($changeset);
         $changerecord->field_name = $relation;
         $changerecord->is_related = true;

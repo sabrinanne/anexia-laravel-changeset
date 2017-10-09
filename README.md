@@ -31,6 +31,78 @@ composer update [-o]
 ```
 to add the packages source code to your ``/vendor`` directory and update the autoloading.
 
+### Custom Database Configuration
+
+By default the changeset tables get added into the application's main database.
+The default changeset db connection is 'changeset_mysql', which is defined in the package's /config/connections.php:
+
+```
+// from package's /config/connections.php:
+
+    'changeset_mysql' => [
+        'driver' => 'mysql',
+        'host' => env('CHANGESET_DB_HOST', env('DB_HOST', '127.0.0.1')),
+        'port' => env('CHANGESET_DB_PORT', env('DB_PORT', '3306')),
+        'database' => env('CHANGESET_DB_DATABASE', env('DB_DATABASE', 'forge')),
+        'username' => env('CHANGESET_DB_USERNAME', env('DB_USERNAME', 'forge')),
+        'password' => env('CHANGESET_DB_PASSWORD', env('DB_PASSWORD', '')),
+        'unix_socket' => env('CHANGESET_DB_SOCKET', env('DB_SOCKET', '')),
+        'charset' => 'utf8mb4',
+        'collation' => 'utf8mb4_unicode_ci',
+        'prefix' => '',
+        'strict' => true,
+        'engine' => null,
+    ],
+```
+
+So the changeset db uses the 'DB_' variables in .env by default. To use a different changeset db, another set of .env
+varibales can be configured:
+```
+# from .env:
+
+CHANGESET_DB_CONNECTION=changeset_pgsql
+CHANGESET_DB_HOST=127.0.0.1
+CHANGESET_DB_PORT=5432
+CHANGESET_DB_DATABASE=database
+CHANGESET_DB_USERNAME=user
+CHANGESET_DB_PASSWORD=pwd
+```
+
+The /config/connections.php comes with a preset variety of possible db configurations (changeset_sqlite, 
+changeset_mysql, changeset_pgsql, changeset_sqlsrv), similar to Laravel's default db configurations. On application
+boot, these entries get added to the application's 'database.connections' configuration field.
+
+If a different configuration is needed, it can always be defined in the usual Laravel manner in the application's
+/config/database.php and then set via the .env variables, e.g.:
+
+```
+// from application's /config/database.php
+    'connections' => [
+        ...
+        
+        'changeset_new' => [
+            'driver' => 'mysql',
+            'host' => env('CHANGESET_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('CHANGESET_DB_PORT', env('DB_PORT', '3306')),
+            'db' => env('CHANGESET_DB_DATABASE', env('DB_DATABASE', 'forge')),
+            'user' => env('CHANGESET_DB_USERNAME', env('DB_USERNAME', 'forge')),
+            'pwd' => env('CHANGESET_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'socket' => env('CHANGESET_DB_SOCKET', env('DB_SOCKET', '')),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'strict' => true,
+            'engine' => null,
+        ],
+    ],
+
+```
+```
+# from .env: 
+
+CHANGESET_DB_CONNECTION=changeset_new
+```
+
 ## How it works
 
 The Changeset package comes with three new models:
@@ -186,17 +258,17 @@ entry.
 #### Seeding
 
 To learn all possible Object Types (= names of classes that use the ChangesetTrackabke trait) at once, the package comes
-with a ChanesetObjectTypeSeeder. This seeder iterates through all classes within the directories "app" and "vendor" and
+with a ChangesetObjectTypeSeeder. This seeder iterates through all classes within the directories "app" and "vendor" and
 and checks whether they (or one of their parent classes) use the ChangesetTrackable trait. If so, the classes name gets
 stored as a new Object Type.
 
-To run the Seeder you have two options:
-1) You can run it explicitely
+To run the Seeder one has two options:
+1) Run it explicitely
 ```
 php artisan db:seed --class="Anexia\\Changeset\\Database\\Seeds\\ChangesetObjectTypeSeeder"
 ```
 
-2) You can include it into your general database seeder, which is usually /database/seeds/DatabaseSeeder.php
+2) Include it into the general database seeder, which is usually /database/seeds/DatabaseSeeder.php
 ```
 <?php
 
@@ -221,7 +293,7 @@ class DatabaseSeeder extends Seeder {
     }
 }
 ```
-If you then run your common seeding command
+With the common seeding command
 ```
 php artisan db:seed
 ```
