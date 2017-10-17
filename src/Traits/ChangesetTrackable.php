@@ -79,7 +79,7 @@ trait ChangesetTrackable
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
         $currentUser = $this->getChangesetUser();
-        $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : '';
+        $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = Changeset::CHANGESET_TYPE_INSERT;
         $attributes = $model->attributes;
@@ -129,7 +129,7 @@ trait ChangesetTrackable
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
         $currentUser = $this->getChangesetUser();
-        $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : '';
+        $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = Changeset::CHANGESET_TYPE_UPDATE;
         $attributes = $model->attributes;
