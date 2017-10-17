@@ -1,6 +1,6 @@
 <?php
 
-namespace Anexia\Changeset;
+namespace Anexia\Changeset\Interfaces;
 
 interface ChangesetUserInterface
 {

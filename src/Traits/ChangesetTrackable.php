@@ -98,6 +98,8 @@ trait ChangesetTrackable
 
         foreach ($attributes as $fieldName => $newValue) {
             if (in_array($fieldName, $this->trackFields)) {
+                $newValue = ($newValue != null) ? $newValue : 'NULL';
+
                 $changerecord = new Changerecord();
                 $changerecord->setConnection($this->getChangesetConnection());
                 $changerecord->display = 'Set ' . $fieldName . ' to ' . $newValue;
@@ -146,7 +148,8 @@ trait ChangesetTrackable
 
         foreach ($attributes as $fieldName => $newValue) {
             if (in_array($fieldName, $this->trackFields)) {
-                $oldValue = $model->original[$fieldName];
+                $oldValue = isset($model->original[$fieldName]) ? $model->original[$fieldName] : 'NULL';
+                $newValue = ($newValue != null) ? $newValue : 'NULL';
                 if ($newValue !== $oldValue) {
                     $changerecord = new Changerecord();
                     $changerecord->setConnection($this->getChangesetConnection());
@@ -179,7 +182,7 @@ trait ChangesetTrackable
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
         $currentUser = $this->getChangesetUser();
-        $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : '';
+        $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = Changeset::CHANGESET_TYPE_DELETE;
 
@@ -282,7 +285,7 @@ trait ChangesetTrackable
         $oTModel->setConnection($this->getChangesetConnection());
         $relatedObjectType = $oTModel->firstOrCreate(['name' => get_class($childModel)]);
 
-        $userName = $user instanceof ChangesetUserInterface ? $user->getUserName() : '';
+        $userName = $user instanceof ChangesetUserInterface ? $user->getUserName() : 'unknown username';
 
         $changeset = new Changeset();
         $changeset->setConnection($this->getChangesetConnection());
