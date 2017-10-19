@@ -98,7 +98,7 @@ trait ChangesetTrackable
 
         foreach ($attributes as $fieldName => $newValue) {
             if (in_array($fieldName, $this->trackFields)) {
-                $newValue = ($newValue != null) ? $newValue : 'NULL';
+                $newValue = !empty($newValue) ? $newValue : 'NULL';
 
                 $changerecord = new Changerecord();
                 $changerecord->setConnection($this->getChangesetConnection());
@@ -148,8 +148,8 @@ trait ChangesetTrackable
 
         foreach ($attributes as $fieldName => $newValue) {
             if (in_array($fieldName, $this->trackFields)) {
-                $oldValue = isset($model->original[$fieldName]) ? $model->original[$fieldName] : 'NULL';
-                $newValue = ($newValue != null) ? $newValue : 'NULL';
+                $oldValue = isset($model->original[$fieldName]) && !empty($model->original[$fieldName]) ? $model->original[$fieldName] : 'NULL';
+                $newValue = !empty($newValue) ? $newValue : 'NULL';
                 if ($newValue !== $oldValue) {
                     $changerecord = new Changerecord();
                     $changerecord->setConnection($this->getChangesetConnection());
