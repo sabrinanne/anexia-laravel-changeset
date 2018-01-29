@@ -309,37 +309,39 @@ trait ChangesetTrackable
         $changerecord->field_name = $relation;
         $changerecord->is_related = true;
 
-        switch (get_class($parentModel->$relation)) {
-            case Collection::class:
-                $relValues = [];
-                foreach ($parentModel->$relation as $rel) {
-                    $relValues[] = ['id' => $rel->id];
-                }
+        if (isset($parentModel->$relation)) {
+            switch (get_class($parentModel->$relation)) {
+                case Collection::class:
+                    $relValues = [];
+                    foreach ($parentModel->$relation as $rel) {
+                        $relValues[] = ['id' => $rel->id];
+                    }
 
-                if ($originalChangesetType == Changeset::CHANGESET_TYPE_INSERT) {
-                    $changerecord->display = 'Changed ' . $relation . ' associations to ' . json_encode($relValues);
-                } else if ($originalChangesetType == Changeset::CHANGESET_TYPE_DELETE) {
-                    $changerecord->display = 'Deleted ' . $relation . ' associations';
-                } else {
-                    $changerecord->display = 'Associated ' . $relation . ' still are ' . json_encode($relValues);
-                }
-                $changerecord->new_value = json_encode($relValues);
-                break;
+                    if ($originalChangesetType == Changeset::CHANGESET_TYPE_INSERT) {
+                        $changerecord->display = 'Changed ' . $relation . ' associations to ' . json_encode($relValues);
+                    } else if ($originalChangesetType == Changeset::CHANGESET_TYPE_DELETE) {
+                        $changerecord->display = 'Deleted ' . $relation . ' associations';
+                    } else {
+                        $changerecord->display = 'Associated ' . $relation . ' still are ' . json_encode($relValues);
+                    }
+                    $changerecord->new_value = json_encode($relValues);
+                    break;
 
-            default:
-                if ($originalChangesetType == Changeset::CHANGESET_TYPE_DELETE) {
-                    $changerecord->display = 'Deleted ' . $relation . ' association ' . $childModel->id;
-                    $changerecord->is_deletion = true;
-                    $changerecord->new_value = null;
-                } else if ($originalChangesetType == Changeset::CHANGESET_TYPE_INSERT) {
-                    $changerecord->display = 'Set ' . $relation . ' association to ' . $childModel->id;
-                    $changerecord->new_value = $childModel->id;
-                } else {
-                    $changerecord->display = 'Associated ' . $relation . ' still is ' . $childModel->id;
-                    $changerecord->new_value = $childModel->id;
-                }
+                default:
+                    if ($originalChangesetType == Changeset::CHANGESET_TYPE_DELETE) {
+                        $changerecord->display = 'Deleted ' . $relation . ' association ' . $childModel->id;
+                        $changerecord->is_deletion = true;
+                        $changerecord->new_value = null;
+                    } else if ($originalChangesetType == Changeset::CHANGESET_TYPE_INSERT) {
+                        $changerecord->display = 'Set ' . $relation . ' association to ' . $childModel->id;
+                        $changerecord->new_value = $childModel->id;
+                    } else {
+                        $changerecord->display = 'Associated ' . $relation . ' still is ' . $childModel->id;
+                        $changerecord->new_value = $childModel->id;
+                    }
 
-                break;
+                    break;
+            }
         }
         $changerecord->save();
 
