@@ -222,43 +222,45 @@ trait ChangesetTrackable
             $oTModel->setConnection($this->getChangesetConnection());
             $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
-            switch (get_class($model->$parentRelation)) {
-                case Collection::class:
-                    if ($model->$parentRelation->count() > 0) {
-                        foreach ($model->$parentRelation as $parent) {
-                            if (!isset($handledChanges[$parentClass][$parent->id])) {
-                                $this->createRelatedChangeset(
-                                    $model,
-                                    $modelChangeset,
-                                    $actionId,
-                                    $changesetType,
-                                    $parent,
-                                    $objectType,
-                                    $inverseRelation,
-                                    $user,
-                                    $handledChanges
-                                );
+            if (isset($model->$parentRelation)) {
+                switch (get_class($model->$parentRelation)) {
+                    case Collection::class:
+                        if ($model->$parentRelation->count() > 0) {
+                            foreach ($model->$parentRelation as $parent) {
+                                if (!isset($handledChanges[$parentClass][$parent->id])) {
+                                    $this->createRelatedChangeset(
+                                        $model,
+                                        $modelChangeset,
+                                        $actionId,
+                                        $changesetType,
+                                        $parent,
+                                        $objectType,
+                                        $inverseRelation,
+                                        $user,
+                                        $handledChanges
+                                    );
+                                }
                             }
                         }
-                    }
-                    break;
-                default:
-                    if ($model->$parentRelation instanceof $parentClass
-                        && !isset($handledChanges[$parentClass][$model->$parentRelation->id])
-                    ) {
-                        $this->createRelatedChangeset(
-                            $model,
-                            $modelChangeset,
-                            $actionId,
-                            $changesetType,
-                            $model->$parentRelation,
-                            $objectType,
-                            $inverseRelation,
-                            $user,
-                            $handledChanges
-                        );
-                    }
-                    break;
+                        break;
+                    default:
+                        if ($model->$parentRelation instanceof $parentClass
+                            && !isset($handledChanges[$parentClass][$model->$parentRelation->id])
+                        ) {
+                            $this->createRelatedChangeset(
+                                $model,
+                                $modelChangeset,
+                                $actionId,
+                                $changesetType,
+                                $model->$parentRelation,
+                                $objectType,
+                                $inverseRelation,
+                                $user,
+                                $handledChanges
+                            );
+                        }
+                        break;
+                }
             }
         }
     }
