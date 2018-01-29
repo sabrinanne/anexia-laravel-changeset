@@ -303,13 +303,13 @@ trait ChangesetTrackable
             . $childModel->id .  ' by ' . $userName;
         $changeset->save();
 
-        $changerecord = new Changerecord();
-        $changerecord->setConnection($this->getChangesetConnection());
-        $changerecord->changeset()->associate($changeset);
-        $changerecord->field_name = $relation;
-        $changerecord->is_related = true;
-
         if (isset($parentModel->$relation)) {
+            $changerecord = new Changerecord();
+            $changerecord->setConnection($this->getChangesetConnection());
+            $changerecord->changeset()->associate($changeset);
+            $changerecord->field_name = $relation;
+            $changerecord->is_related = true;
+
             switch (get_class($parentModel->$relation)) {
                 case Collection::class:
                     $relValues = [];
@@ -342,8 +342,9 @@ trait ChangesetTrackable
 
                     break;
             }
+
+            $changerecord->save();
         }
-        $changerecord->save();
 
         // only create one changeset per each object (collect them to avoid duplicates)
         $handledChanges[get_class($parentModel)][$parentModel->id] = $changesetType;
