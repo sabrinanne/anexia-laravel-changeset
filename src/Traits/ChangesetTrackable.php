@@ -8,7 +8,6 @@ use Anexia\Changeset\ChangesetUserInterface;
 use Anexia\Changeset\ObjectType;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Auth;
 
 trait ChangesetTrackable
 {
@@ -51,23 +50,6 @@ trait ChangesetTrackable
     }
 
     /**
-     * @return ChangesetUserInterface|null
-     */
-    private function getChangesetUser()
-    {
-        $currentUser = null;
-
-        if (Auth::check()) {
-            $authUser = Auth::user();
-            if ($authUser instanceof ChangesetUserInterface) {
-                $currentUser = $authUser;
-            }
-        }
-
-        return $currentUser;
-    }
-
-    /**
      * Called after the model was successfully created (INSERTED into database)
      *
      * @param Model $model
@@ -78,19 +60,18 @@ trait ChangesetTrackable
         $oTModel->setConnection($this->getChangesetConnection());
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
-        $currentUser = $this->getChangesetUser();
+        $changeset = new Changeset();
+        $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = Changeset::CHANGESET_TYPE_INSERT;
         $attributes = $model->attributes;
 
-        $changeset = new Changeset();
         $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
         $changeset->objectType()->associate($objectType);
         $changeset->object_uuid = $model->id;
-        $changeset->user()->associate($currentUser);
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
@@ -128,19 +109,18 @@ trait ChangesetTrackable
         $oTModel->setConnection($this->getChangesetConnection());
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
-        $currentUser = $this->getChangesetUser();
+        $changeset = new Changeset();
+        $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = Changeset::CHANGESET_TYPE_UPDATE;
         $attributes = $model->attributes;
 
-        $changeset = new Changeset();
         $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
         $changeset->objectType()->associate($objectType);
         $changeset->object_uuid = $model->id;
-        $changeset->user()->associate($currentUser);
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
@@ -181,18 +161,17 @@ trait ChangesetTrackable
         $oTModel->setConnection($this->getChangesetConnection());
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
-        $currentUser = $this->getChangesetUser();
+        $changeset = new Changeset();
+        $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = Changeset::CHANGESET_TYPE_DELETE;
 
-        $changeset = new Changeset();
         $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
         $changeset->objectType()->associate($objectType);
         $changeset->object_uuid = $model->id;
-        $changeset->user()->associate($currentUser);
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;

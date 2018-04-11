@@ -32,4 +32,9 @@ class Changerecord extends Model
     {
         return $this->belongsTo(Changeset::class);
     }
+
+    public function __construct(array $attributes = [])
+    {
+        parent::__construct($attributes);
+    }
 }
