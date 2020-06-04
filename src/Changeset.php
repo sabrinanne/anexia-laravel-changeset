@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 class Changeset extends Model
 {
     /** @var string */
-    protected $userModelClass = 'App\User';
+    protected $userModelClass = 'App\Model\User';
 
     /** string */
     const CHANGESET_TYPE_INSERT = 'I';
@@ -58,7 +58,7 @@ class Changeset extends Model
     /**
      * @param string $userModelClass
      */
-    public function setUserModelClass($userModelClass = 'App\User')
+    public function setUserModelClass($userModelClass = 'App\Model\User')
     {
         $this->userModelClass = $userModelClass;
     }
