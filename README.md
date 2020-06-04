@@ -117,7 +117,7 @@ Changeset
     * object_uuid (tracked identifier of the object; 'id' property by default; not nullable)
     * related_changeset_id (child changeset that triggered an additional changeset for a parent model; the parent model
         is defined by $trackRelated in the child class; foreign_key to changeset; nullable)
-    * user_id (identifier of the user that triggered the change; must implement the ChangesetUserInterface; App\Model\User by
+    * user_id (identifier of the user that triggered the change; must implement the ChangesetUserInterface; App\Models\User by
         default; nullable)
     * created_at (timestamp of the changeset entry's creation in the database; auto-managed by Eloquent)
     * updated_at (timestamp of the changeset entry's last update in the database; auto-managed by Eloquent)
@@ -198,7 +198,7 @@ class Post extends BaseModel
     
     public function author()
     {
-        return $this->belongsTo('App\Model\User', 'author_id');
+        return $this->belongsTo('App\Models\User', 'author_id');
     }
 }
 
@@ -305,7 +305,7 @@ Since Post.php has a relation to another model User.php (via 'author') and confi
 any change on a post object will not just trigger a changeset for that post, but also for its associated author. So
 
 - If a new model gets saved, a new 'CREATE' changeset with object type App\Post gets created, all its properties
-receive a changerecord that gets associated to that changeset. Also a new 'UPDATE' changeset with object type App\Model\User
+receive a changerecord that gets associated to that changeset. Also a new 'UPDATE' changeset with object type App\Models\User
 gets created, with a changerecord for field_name 'posts', is_related = true and the display info that a post object got
 newly associated. 
 
@@ -320,7 +320,7 @@ changesets and changerecords would be generated:
     },
     {
         "id":2,
-        "name":"App\Model\User"
+        "name":"App\Models\User"
     }
 ]
 ```
@@ -383,7 +383,7 @@ changesets and changerecords would be generated:
     "id":2,
     "action_id":"59d5ced79454e",
     "changeset_type":"U",
-    "display":"UPDATE App\Model\User 1 at date 2017-10-05 10:02:46 after INSERT App\Post 1 by admin",
+    "display":"UPDATE App\Models\User 1 at date 2017-10-05 10:02:46 after INSERT App\Post 1 by admin",
     "object_type_id":2,
     "object_uuid":1,
     "related_changeset_id":1,
@@ -408,7 +408,7 @@ changesets and changerecords would be generated:
 ```
 - If an existing post gets updated, a new 'UPDATE' changeset with object type App\Post gets created, all the changed
 properties receive a changerecord that gets associated to that changeset. Also a new 'UPDATE' changeset with object type 
-App\Model\User gets created, with a changerecord for field_name 'posts', is_related = true and the display info that a
+App\Models\User gets created, with a changerecord for field_name 'posts', is_related = true and the display info that a
 certain associated post got changed.
 Assuming the existing post with id 1 gets changed by admin (= user 1), the following changesets and changerecords 
 would be generated:
@@ -447,7 +447,7 @@ would be generated:
     "id":4,
     "action_id":"59d5f7c928e33",
     "changeset_type":"U",
-    "display":"UPDATE App\Model\User 1 at date 2017-10-05 12:03:10 after UPDATE App\Post 1 by admin",
+    "display":"UPDATE App\Models\User 1 at date 2017-10-05 12:03:10 after UPDATE App\Post 1 by admin",
     "object_type_id":2,
     "object_uuid":1,
     "related_changeset_id":3,
@@ -471,7 +471,7 @@ would be generated:
 }
 ```
 - If an existing post gets deleted, a new 'DELETE' changeset with object type App\Post gets created. Also a new
-'UPDATE' changeset with object type App\Model\User gets created, with a changerecord for field_name 'posts',
+'UPDATE' changeset with object type App\Models\User gets created, with a changerecord for field_name 'posts',
 is_related = true, is_deletion = true and the display info that a certain associated post got deleted.
 ```
 // changeset (with no changerecords) for post
@@ -494,7 +494,7 @@ is_related = true, is_deletion = true and the display info that a certain associ
     "id":6,
     "action_id":"59d5fd3f34bf9",
     "changeset_type":"U",
-    "display":"UPDATE App\Model\User 1 at date 2017-10-05 12:05:51 after DELETE App\Post 1 by admin",
+    "display":"UPDATE App\Models\User 1 at date 2017-10-05 12:05:51 after DELETE App\Post 1 by admin",
     "object_type_id":2,
     "object_uuid":1,
     "related_changeset_id":5,

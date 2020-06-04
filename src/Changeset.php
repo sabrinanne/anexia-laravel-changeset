@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 class Changeset extends Model
 {
     /** @var string */
-    protected $userModelClass = 'App\Model\User';
+    protected $userModelClass = 'App\Models\User';
 
     /** string */
     const CHANGESET_TYPE_INSERT = 'I';
@@ -32,7 +32,9 @@ class Changeset extends Model
         'display',
         'object_type_id',
         'object_uuid',
-        'user_id'
+        'user_id',
+        'status',
+        'version'
     ];
 
     protected $casts = [
@@ -41,7 +43,9 @@ class Changeset extends Model
         'display' => 'string',
         'object_type_id' => 'integer',
         'object_uuid' => 'string',
-        'user_id' => 'integer'
+        'user_id' => 'integer',
+        'status' => 'string',
+        'version' => 'integer'
     ];
 
     public function __construct(array $attributes = [])
@@ -55,10 +59,27 @@ class Changeset extends Model
         }
     }
 
+    public static function boot()
+    {
+        parent::boot();
+
+        static::creating(
+            function ($model) {
+                $lastVersion = Changeset::where('object_type_id', $model->object_type_id)
+                    ->where('object_uuid', $model->object_uuid)
+                    ->latest('version')->first();
+
+                if ($lastVersion) {
+                    $model->version = $lastVersion->version + 1;
+                }
+            }
+        );
+    }
+
     /**
      * @param string $userModelClass
      */
-    public function setUserModelClass($userModelClass = 'App\Model\User')
+    public function setUserModelClass($userModelClass = 'App\Models\User')
     {
         $this->userModelClass = $userModelClass;
     }
