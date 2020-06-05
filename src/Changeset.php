@@ -74,6 +74,14 @@ class Changeset extends Model
                 }
             }
         );
+
+        static::updating(
+            function ($model) {
+                if ($model->isDirty('status') && $model->status === 'approved'){
+                    self::executeChangeset($model);
+                }
+            }
+        );
     }
 
     /**
@@ -128,5 +136,22 @@ class Changeset extends Model
     public function user()
     {
         return $this->belongsTo($this->userModelClass);
+    }
+
+    private static function executeChangeset($changeset) {
+        if ($changeset->changeset_type === 'U') {
+            $objectType = $changeset->objectType->name;
+            $object = $objectType::find($changeset->object_uuid);
+
+            if ($object) {
+                $attributes = $changeset->changerecords()->get()->reduce(function ($accumulator, $changerecord) {
+                    $accumulator[$changerecord->field_name] = $changerecord->new_value;
+                    return $accumulator;
+                });
+
+                $attributes['execute'] = true;
+                $object->update($attributes);
+            }
+        }
     }
 }

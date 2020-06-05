@@ -37,18 +37,25 @@ trait ChangesetTrackable
     protected static function bootChangesetTrackable()
     {
         static::creating(function(Model $model) {
-            $model->setPerformCUD(false);
-            $model->newCreationChangeset($model);
+            if (!$model->execute) {
+                $model->setPerformCUD(false);
+                $model->newCreationChangeset($model);
+            }
         });
 
         static::updating(function(Model $model) {
-            $model->setPerformCUD(false);
-            $model->newUpdateChangeset($model);
+            if (!$model->execute) {
+                $model->setPerformCUD(false);
+                $model->newUpdateChangeset($model);
+            }
+            unset($model->execute);
         });
 
         static::deleting(function(Model $model) {
-            $model->setPerformCUD(false);
-            $model->newDeletionChangeset($model);
+            if (!$model->execute) {
+                $model->setPerformCUD(false);
+                $model->newDeletionChangeset($model);
+            }
         });
     }
 
