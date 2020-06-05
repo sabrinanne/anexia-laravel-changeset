@@ -41,6 +41,7 @@ trait ChangesetTrackable
                 $model->setPerformCUD(false);
                 $model->newCreationChangeset($model);
             }
+            unset($model->execute);
         });
 
         static::updating(function(Model $model) {
@@ -56,6 +57,7 @@ trait ChangesetTrackable
                 $model->setPerformCUD(false);
                 $model->newDeletionChangeset($model);
             }
+            unset($model->execute);
         });
     }
 
