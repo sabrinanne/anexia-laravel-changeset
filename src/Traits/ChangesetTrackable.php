@@ -4,7 +4,11 @@ namespace Anexia\Changeset\Traits;
 
 use Anexia\Changeset\Changerecord;
 use Anexia\Changeset\Changeset;
-use Anexia\Changeset\ChangesetUserInterface;
+use Anexia\Changeset\Constants\ChangesetStatus;
+use Anexia\Changeset\Constants\ChangesetType;
+use Anexia\Changeset\Constants\ChangesetTypeLong;
+use Anexia\Changeset\Constants\ResourceStatus;
+use Anexia\Changeset\Interfaces\ChangesetUserInterface;
 use Anexia\Changeset\ObjectType;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -19,10 +23,11 @@ trait ChangesetTrackable
     protected $trackRelated = [];
 
     protected $changesetTypesMap = [
-        Changeset::CHANGESET_TYPE_INSERT => Changeset::CHANGESET_TYPE_LONG_INSERT,
-        Changeset::CHANGESET_TYPE_UPDATE => Changeset::CHANGESET_TYPE_LONG_UPDATE,
-        Changeset::CHANGESET_TYPE_DELETE => Changeset::CHANGESET_TYPE_LONG_DELETE
+        ChangesetType::INSERT => ChangesetTypeLong::INSERT,
+        ChangesetType::UPDATE => ChangesetTypeLong::UPDATE,
+        ChangesetType::DELETE => ChangesetTypeLong::DELETE,
     ];
+
 
     /**
      * Get the changeset connection name.
@@ -36,28 +41,26 @@ trait ChangesetTrackable
 
     protected static function bootChangesetTrackable()
     {
-        static::creating(function(Model $model) {
-            if (!$model->execute) {
-                $model->setPerformCUD(false);
-                $model->newCreationChangeset($model);
+        static::created(function(Model $model) {
+            // If it is pending, we should be handling the changeset creation in controller to be able to set correct model status in changeset
+            if ($model->status !== ResourceStatus::PENDING) {
+                $model->newCreationChangeset($model, ChangesetStatus::APPROVED);
             }
-            unset($model->execute);
         });
 
         static::updating(function(Model $model) {
-            if (!$model->execute) {
-                $model->setPerformCUD(false);
-                $model->newUpdateChangeset($model);
+            if (!$model::$skipChangesetCreation)
+            {
+                $status = $model::$requireApproval ? ChangesetStatus::PENDING : ChangesetStatus::APPROVED;
+                $model->newUpdateChangeset($model, $status);
             }
-            unset($model->execute);
         });
 
         static::deleting(function(Model $model) {
-            if (!$model->execute) {
-                $model->setPerformCUD(false);
-                $model->newDeletionChangeset($model);
+            if (!$model::$skipChangesetCreation) {
+                $status = $model::$requireApproval ? ChangesetStatus::PENDING : ChangesetStatus::APPROVED;
+                $model->newDeletionChangeset($model, $status);
             }
-            unset($model->execute);
         });
     }
 
@@ -65,8 +68,9 @@ trait ChangesetTrackable
      * Called after the model was successfully created (INSERTED into database)
      *
      * @param Model $model
+     * @param string $status
      */
-    public function newCreationChangeset(Model $model)
+    public function newCreationChangeset(Model $model, string $status)
     {
         $oTModel = new ObjectType();
         $oTModel->setConnection($this->getChangesetConnection());
@@ -76,7 +80,7 @@ trait ChangesetTrackable
         $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
-        $changesetType = Changeset::CHANGESET_TYPE_INSERT;
+        $changesetType = ChangesetType::INSERT;
         $attributes = $model->attributes;
 
         $changeset->setConnection($this->getChangesetConnection());
@@ -87,6 +91,7 @@ trait ChangesetTrackable
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
+        $changeset->status = $status;
         $changeset->save();
 
         foreach ($attributes as $fieldName => $newValue) {
@@ -106,7 +111,7 @@ trait ChangesetTrackable
         if (!empty($model->trackRelated)) {
             // only create one changeset per each object (collect them to avoid duplicates)
             $handledChanges[$objectType->name][$model->id] = $changesetType;
-            $this->manageRelatedChangesets($model, $changeset, $actionId, $changesetType, $currentUser, $handledChanges);
+            $this->manageRelatedChangesets($model, $changeset, $actionId, $changesetType, $status, $currentUser, $handledChanges);
         }
     }
 
@@ -114,8 +119,9 @@ trait ChangesetTrackable
      * Called after the model was successfully updated (UPDATED in database)
      *
      * @param Model $model
+     * @param string $model
      */
-    public function newUpdateChangeset(Model $model)
+    public function newUpdateChangeset(Model $model, string $status)
     {
         $oTModel = new ObjectType();
         $oTModel->setConnection($this->getChangesetConnection());
@@ -125,7 +131,7 @@ trait ChangesetTrackable
         $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
-        $changesetType = Changeset::CHANGESET_TYPE_UPDATE;
+        $changesetType = ChangesetType::UPDATE;
         $attributes = $model->attributes;
 
         $changeset->setConnection($this->getChangesetConnection());
@@ -136,6 +142,7 @@ trait ChangesetTrackable
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
+        $changeset->status = $status;
         $changeset->save();
 
         foreach ($attributes as $fieldName => $newValue) {
@@ -158,7 +165,7 @@ trait ChangesetTrackable
         if (!empty($model->trackRelated)) {
             // only create one changeset per each object (collect them to avoid duplicates)
             $handledChanges[$objectType->name][$model->id] = $changesetType;
-            $this->manageRelatedChangesets($model, $changeset, $actionId, $changesetType, $currentUser, $handledChanges);
+            $this->manageRelatedChangesets($model, $changeset, $actionId, $changesetType, $status, $currentUser, $handledChanges);
         }
     }
 
@@ -166,8 +173,9 @@ trait ChangesetTrackable
      * Called after the model was successfully deleted (DELETED from database)
      *
      * @param Model $model
+     * @param string $status
      */
-    public function newDeletionChangeset(Model $model)
+    public function newDeletionChangeset(Model $model, string $status)
     {
         $oTModel = new ObjectType();
         $oTModel->setConnection($this->getChangesetConnection());
@@ -177,7 +185,7 @@ trait ChangesetTrackable
         $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
-        $changesetType = Changeset::CHANGESET_TYPE_DELETE;
+        $changesetType = ChangesetType::DELETE;
 
         $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
@@ -187,12 +195,13 @@ trait ChangesetTrackable
 
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
+        $changeset->status = $status;
         $changeset->save();
 
         if (!empty($model->trackRelated)) {
             // only create one changeset per each object (collect them to avoid duplicates)
             $handledChanges[$objectType->name][$model->id] = $changesetType;
-            $this->manageRelatedChangesets($model, $changeset, $actionId, $changesetType, $currentUser, $handledChanges);
+            $this->manageRelatedChangesets($model, $changeset, $actionId, $changesetType, $status, $currentUser, $handledChanges);
         }
     }
 
@@ -203,15 +212,13 @@ trait ChangesetTrackable
      * @param string $changesetType
      * @param Model|null $user
      * @param array $handledChanges
+     * @param string $status
      */
-    private function manageRelatedChangesets(Model $model, Changeset $modelChangeset, $actionId,
-                                             $changesetType, Model $user = null, &$handledChanges = [])
+    private function manageRelatedChangesets(Model $model, Changeset $modelChangeset, $actionId, $changesetType, $status,
+                                             Model $user = null, &$handledChanges = [])
     {
         foreach ($model->trackRelated as $parentRelation => $inverseRelation) {
             $parentClass = get_class($model->$parentRelation()->getModel());
-            $oTModel = new ObjectType();
-            $oTModel->setConnection($this->getChangesetConnection());
-            $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
             if (isset($model->$parentRelation)) {
                 switch (get_class($model->$parentRelation)) {
@@ -225,8 +232,8 @@ trait ChangesetTrackable
                                         $actionId,
                                         $changesetType,
                                         $parent,
-                                        $objectType,
                                         $inverseRelation,
+                                        $status,
                                         $user,
                                         $handledChanges
                                     );
@@ -244,8 +251,8 @@ trait ChangesetTrackable
                                 $actionId,
                                 $changesetType,
                                 $model->$parentRelation,
-                                $objectType,
                                 $inverseRelation,
+                                $status,
                                 $user,
                                 $handledChanges
                             );
@@ -268,15 +275,17 @@ trait ChangesetTrackable
      * @param string $relation
      * @param ChangesetUserInterface|null $user
      * @param array|null $handledChanges
+     * @param string $status
      */
     private function createRelatedChangeset(Model $childModel, Changeset $childChangeset, $actionId,
-                                            $originalChangesetType, Model $parentModel, ObjectType $objectType,
-                                            $relation, ChangesetUserInterface $user = null, &$handledChanges = [])
+                                            $originalChangesetType, Model $parentModel, $relation, $status,
+                                            ChangesetUserInterface $user = null, &$handledChanges = [])
     {
-        $changesetType = Changeset::CHANGESET_TYPE_UPDATE;
+        $changesetType = ChangesetType::UPDATE;
         $oTModel = new ObjectType();
         $oTModel->setConnection($this->getChangesetConnection());
         $relatedObjectType = $oTModel->firstOrCreate(['name' => get_class($childModel)]);
+        $parentModelType = $oTModel->firstOrCreate(['name' => get_class($parentModel)]);
 
         $userName = $user instanceof ChangesetUserInterface ? $user->getUserName() : 'unknown username';
 
@@ -284,14 +293,15 @@ trait ChangesetTrackable
         $changeset->setConnection($this->getChangesetConnection());
         $changeset->action_id = $actionId;
         $changeset->changeset_type = $changesetType;
-        $changeset->objectType()->associate($objectType);
+        $changeset->objectType()->associate($parentModelType);
         $changeset->object_uuid = $parentModel->id;
         $changeset->relatedChangeset()->associate($childChangeset);
         $changeset->user()->associate($user);
-        $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' '
+        $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $parentModelType->name . ' '
             . $parentModel->id . ' at date ' . date('Y-m-d H:i:s') . ' after '
             . $this->changesetTypesMap[$originalChangesetType] . ' ' . $relatedObjectType->name . ' '
             . $childModel->id .  ' by ' . $userName;
+        $changeset->status = $status;
         $changeset->save();
 
         if (isset($parentModel->$relation)) {
@@ -308,9 +318,9 @@ trait ChangesetTrackable
                         $relValues[] = ['id' => $rel->id];
                     }
 
-                    if ($originalChangesetType == Changeset::CHANGESET_TYPE_INSERT) {
+                    if ($originalChangesetType == ChangesetType::INSERT) {
                         $changerecord->display = 'Changed ' . $relation . ' associations to ' . json_encode($relValues);
-                    } else if ($originalChangesetType == Changeset::CHANGESET_TYPE_DELETE) {
+                    } else if ($originalChangesetType == ChangesetType::DELETE) {
                         $changerecord->display = 'Deleted ' . $relation . ' associations';
                     } else {
                         $changerecord->display = 'Associated ' . $relation . ' still are ' . json_encode($relValues);
@@ -319,11 +329,11 @@ trait ChangesetTrackable
                     break;
 
                 default:
-                    if ($originalChangesetType == Changeset::CHANGESET_TYPE_DELETE) {
+                    if ($originalChangesetType == ChangesetType::DELETE) {
                         $changerecord->display = 'Deleted ' . $relation . ' association ' . $childModel->id;
                         $changerecord->is_deletion = true;
                         $changerecord->new_value = null;
-                    } else if ($originalChangesetType == Changeset::CHANGESET_TYPE_INSERT) {
+                    } else if ($originalChangesetType == ChangesetType::INSERT) {
                         $changerecord->display = 'Set ' . $relation . ' association to ' . $childModel->id;
                         $changerecord->new_value = $childModel->id;
                     } else {
@@ -342,7 +352,7 @@ trait ChangesetTrackable
 
         // recursion starts here
         if (!empty($parentModel->trackRelated)) {
-            $this->manageRelatedChangesets($parentModel, $changeset, $actionId, $changesetType, $user, $handledChanges);
+            $this->manageRelatedChangesets($parentModel, $changeset, $actionId, $changesetType, $status, $user, $handledChanges);
         }
     }
 }

@@ -2,6 +2,8 @@
 
 namespace Anexia\Changeset;
 
+use Anexia\Changeset\Constants\ChangesetStatus;
+use Anexia\Changeset\Constants\ChangesetType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,13 +18,6 @@ class Changeset extends Model
     const CHANGESET_TYPE_UPDATE = 'U';
     /** string */
     const CHANGESET_TYPE_DELETE = 'D';
-
-    /** string */
-    const CHANGESET_TYPE_LONG_INSERT = 'INSERT';
-    /** string */
-    const CHANGESET_TYPE_LONG_UPDATE = 'UPDATE';
-    /** string */
-    const CHANGESET_TYPE_LONG_DELETE = 'DELETE';
 
     protected $table = 'changesets';
     public $timestamps = true;
@@ -77,7 +72,7 @@ class Changeset extends Model
 
         static::updating(
             function ($model) {
-                if ($model->isDirty('status') && $model->status === 'approved'){
+                if ($model->isDirty('status')){
                     self::executeChangeset($model);
                 }
             }
@@ -138,20 +133,35 @@ class Changeset extends Model
         return $this->belongsTo($this->userModelClass);
     }
 
-    private static function executeChangeset($changeset) {
-        if ($changeset->changeset_type === 'U') {
-            $objectType = $changeset->objectType->name;
-            $object = $objectType::find($changeset->object_uuid);
+    private static function executeChangeset($model) {
+        $objectType = $model->objectType->name;
+        $object = $objectType::find($model->object_uuid);
+        $object->setSkipChangesetCreation(true);
 
-            if ($object) {
-                $attributes = $changeset->changerecords()->get()->reduce(function ($accumulator, $changerecord) {
+        if ($model->changeset_type === ChangesetType::INSERT && $model->status === ChangesetStatus::REJECTED) {
+            $object->delete();
+        } else if ($model->status === ChangesetStatus::APPROVED)
+        {
+            if($model->changeset_type === ChangesetType::INSERT)
+                // Retrieve original status that user set
+                $object->status = $model->changerecords()->where('field_name', 'status')->first()->new_value;
+            $object->save();
+        }
+        else if($model->changeset_type === ChangesetType::UPDATE)
+        {
+            $attributes = $model->changerecords()->get()->reduce(
+                function ($accumulator, $changerecord) {
                     $accumulator[$changerecord->field_name] = $changerecord->new_value;
                     return $accumulator;
-                });
+                }
+            );
 
-                $attributes['execute'] = true;
-                $object->update($attributes);
-            }
+            $object->update($attributes);
+        }
+        else if($model->changeset_type === ChangesetType::DELETE)
+        {
+            $object->delete();
         }
     }
+}
 }
