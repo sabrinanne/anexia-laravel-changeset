@@ -4,6 +4,7 @@ namespace Anexia\Changeset;
 
 use Anexia\Changeset\Constants\ChangesetStatus;
 use Anexia\Changeset\Constants\ChangesetType;
+use Anexia\Changeset\Constants\ResourceStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
 
@@ -140,27 +141,29 @@ class Changeset extends Model
 
         if ($model->changeset_type === ChangesetType::INSERT && $model->status === ChangesetStatus::REJECTED) {
             $object->delete();
-        } else if ($model->status === ChangesetStatus::APPROVED)
-        {
+        } else if ($model->status === ChangesetStatus::APPROVED) {
             if($model->changeset_type === ChangesetType::INSERT)
+            {
                 // Retrieve original status that user set
-                $object->status = $model->changerecords()->where('field_name', 'status')->first()->new_value;
-            $object->save();
-        }
-        else if($model->changeset_type === ChangesetType::UPDATE)
-        {
-            $attributes = $model->changerecords()->get()->reduce(
-                function ($accumulator, $changerecord) {
-                    $accumulator[$changerecord->field_name] = $changerecord->new_value;
-                    return $accumulator;
-                }
-            );
+                $statusChangeRecord = $model->changerecords()->where('field_name', 'status')->first();
+                $object->status = $statusChangeRecord ? $statusChangeRecord->new_value : ResourceStatus::ENABLED;
+                $object->save();
+            }
+            else if($model->changeset_type === ChangesetType::UPDATE)
+            {
+                $attributes = $model->changerecords()->get()->reduce(
+                    function ($accumulator, $changerecord) {
+                        $accumulator[$changerecord->field_name] = $changerecord->new_value;
+                        return $accumulator;
+                    }
+                );
 
-            $object->update($attributes);
-        }
-        else if($model->changeset_type === ChangesetType::DELETE)
-        {
-            $object->delete();
+                $object->update($attributes);
+            }
+            else if($model->changeset_type === ChangesetType::DELETE)
+            {
+                $object->delete();
+            }
         }
     }
 }
