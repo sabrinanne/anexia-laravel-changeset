@@ -26,6 +26,8 @@ trait ChangesetTrackable
         ChangesetType::INSERT => ChangesetTypeLong::INSERT,
         ChangesetType::UPDATE => ChangesetTypeLong::UPDATE,
         ChangesetType::DELETE => ChangesetTypeLong::DELETE,
+        ChangesetType::ATTACH => ChangesetTypeLong::ATTACH,
+        ChangesetType::DETACH => ChangesetTypeLong::DETACH,
     ];
 
 
@@ -52,14 +54,14 @@ trait ChangesetTrackable
             if (!$model::$skipChangesetCreation)
             {
                 $status = $model::$requireApproval ? ChangesetStatus::PENDING : ChangesetStatus::APPROVED;
-                $model->newUpdateChangeset($model, $status);
+                $model->newUpdateChangeset($model, $status, $model::$user);
             }
         });
 
         static::deleting(function(Model $model) {
             if (!$model::$skipChangesetCreation) {
                 $status = $model::$requireApproval ? ChangesetStatus::PENDING : ChangesetStatus::APPROVED;
-                $model->newDeletionChangeset($model, $status);
+                $model->newDeletionChangeset($model, $status, $model::$user);
             }
         });
     }
@@ -70,14 +72,13 @@ trait ChangesetTrackable
      * @param Model $model
      * @param string $status
      */
-    public function newCreationChangeset(Model $model, string $status)
+    public function newCreationChangeset(Model $model, string $status, Model $currentUser = null)
     {
         $oTModel = new ObjectType();
         $oTModel->setConnection($this->getChangesetConnection());
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
         $changeset = new Changeset();
-        $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = ChangesetType::INSERT;
@@ -92,6 +93,7 @@ trait ChangesetTrackable
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
         $changeset->status = $status;
+        $changeset->user_id = $currentUser ? $currentUser->id : null;
         $changeset->save();
 
         foreach ($attributes as $fieldName => $newValue) {
@@ -121,14 +123,13 @@ trait ChangesetTrackable
      * @param Model $model
      * @param string $model
      */
-    public function newUpdateChangeset(Model $model, string $status)
+    public function newUpdateChangeset(Model $model, string $status, Model $currentUser = null)
     {
         $oTModel = new ObjectType();
         $oTModel->setConnection($this->getChangesetConnection());
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
         $changeset = new Changeset();
-        $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = ChangesetType::UPDATE;
@@ -143,6 +144,7 @@ trait ChangesetTrackable
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
         $changeset->status = $status;
+        $changeset->user_id = $currentUser ? $currentUser->id : null;
         $changeset->save();
 
         foreach ($attributes as $fieldName => $newValue) {
@@ -175,14 +177,13 @@ trait ChangesetTrackable
      * @param Model $model
      * @param string $status
      */
-    public function newDeletionChangeset(Model $model, string $status)
+    public function newDeletionChangeset(Model $model, string $status, Model $currentUser = null)
     {
         $oTModel = new ObjectType();
         $oTModel->setConnection($this->getChangesetConnection());
         $objectType = $oTModel->firstOrCreate(['name' => get_class($model)]);
 
         $changeset = new Changeset();
-        $currentUser = $changeset->user;
         $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
         $actionId = uniqid();
         $changesetType = ChangesetType::DELETE;
@@ -196,6 +197,7 @@ trait ChangesetTrackable
         $changeset->display = $this->changesetTypesMap[$changesetType] . ' ' . $objectType->name . ' ' . $model->id
             . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
         $changeset->status = $status;
+        $changeset->user_id = $currentUser ? $currentUser->id : null;
         $changeset->save();
 
         if (!empty($model->trackRelated)) {
@@ -354,5 +356,71 @@ trait ChangesetTrackable
         if (!empty($parentModel->trackRelated)) {
             $this->manageRelatedChangesets($parentModel, $changeset, $actionId, $changesetType, $status, $user, $handledChanges);
         }
+    }
+
+    public function newAttachChangeset(string $parentClass, int $parentID, string $relation, int $childID, string $status, Model $currentUser = null)
+    {
+        $oTModel = new ObjectType();
+        $oTModel->setConnection($this->getChangesetConnection());
+        $parentObjectType = $oTModel->firstOrCreate(['name' => $parentClass]);
+
+        $changeset = new Changeset();
+        $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
+        $actionId = uniqid();
+        $changesetType = ChangesetType::ATTACH;
+        //$attributes = $model->attributes;
+
+        $changeset->setConnection($this->getChangesetConnection());
+        $changeset->action_id = $actionId;
+        $changeset->changeset_type = $changesetType;
+        $changeset->objectType()->associate($parentObjectType);
+        $changeset->object_uuid = $parentID;
+
+        $changeset->display = $this->changesetTypesMap[$changesetType] . ' to ' . $parentObjectType->name . ' ' . $parentID
+            . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
+        $changeset->status = $status;
+        $changeset->user_id = $currentUser ? $currentUser->id : null;
+        $changeset->save();
+
+        $changerecord = new Changerecord();
+        $changerecord->setConnection($this->getChangesetConnection());
+        $changerecord->display = 'Attach ' . $relation . ' ' . $childID;
+        $changerecord->field_name = $relation;
+        $changerecord->new_value = $childID;
+        $changerecord->changeset()->associate($changeset);
+        $changerecord->save();
+    }
+
+    public function newDetachChangeset(string $parentClass, int $parentID, string $relation, int $childID, string $status, Model $currentUser = null)
+    {
+        $oTModel = new ObjectType();
+        $oTModel->setConnection($this->getChangesetConnection());
+        $parentObjectType = $oTModel->firstOrCreate(['name' => $parentClass]);
+
+        $changeset = new Changeset();
+        $userName = $currentUser instanceof ChangesetUserInterface ? $currentUser->getUserName() : 'unknown username';
+        $actionId = uniqid();
+        $changesetType = ChangesetType::DETACH;
+        //$attributes = $model->attributes;
+
+        $changeset->setConnection($this->getChangesetConnection());
+        $changeset->action_id = $actionId;
+        $changeset->changeset_type = $changesetType;
+        $changeset->objectType()->associate($parentObjectType);
+        $changeset->object_uuid = $parentID;
+
+        $changeset->display = $this->changesetTypesMap[$changesetType] . ' from ' . $parentObjectType->name . ' ' . $parentID
+            . ' at date ' . date('Y-m-d H:i:s') . ' by ' . $userName;
+        $changeset->status = $status;
+        $changeset->user_id = $currentUser ? $currentUser->id : null;
+        $changeset->save();
+
+        $changerecord = new Changerecord();
+        $changerecord->setConnection($this->getChangesetConnection());
+        $changerecord->display = 'Detach ' . $relation . ' ' . $childID;
+        $changerecord->field_name = $relation;
+        $changerecord->new_value = $childID;
+        $changerecord->changeset()->associate($changeset);
+        $changerecord->save();
     }
 }

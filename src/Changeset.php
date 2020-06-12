@@ -142,27 +142,41 @@ class Changeset extends Model
         if ($model->changeset_type === ChangesetType::INSERT && $model->status === ChangesetStatus::REJECTED) {
             $object->delete();
         } else if ($model->status === ChangesetStatus::APPROVED) {
-            if($model->changeset_type === ChangesetType::INSERT)
-            {
-                // Retrieve original status that user set
-                $statusChangeRecord = $model->changerecords()->where('field_name', 'status')->first();
-                $object->status = $statusChangeRecord ? $statusChangeRecord->new_value : ResourceStatus::ENABLED;
-                $object->save();
-            }
-            else if($model->changeset_type === ChangesetType::UPDATE)
-            {
-                $attributes = $model->changerecords()->get()->reduce(
-                    function ($accumulator, $changerecord) {
-                        $accumulator[$changerecord->field_name] = $changerecord->new_value;
-                        return $accumulator;
+            switch ($model->changeset_type) {
+                case ChangesetType::INSERT;
+                    // Retrieve original status that user set
+                    $statusChangeRecord = $model->changerecords()->where('field_name', 'status')->first();
+                    $object->status = $statusChangeRecord ? $statusChangeRecord->new_value : ResourceStatus::ENABLED;
+                    $object->save();
+                    break;
+                case ChangesetType::UPDATE:
+                    $attributes = $model->changerecords()->get()->reduce(
+                        function ($accumulator, $changerecord) {
+                            $accumulator[$changerecord->field_name] = $changerecord->new_value;
+                            return $accumulator;
+                        }
+                    );
+                    $object->update($attributes);
+                    break;
+                case ChangesetType::DELETE:
+                    $object->delete();
+                    break;
+                case ChangesetType::ATTACH:
+                    // todo update to handle when pivot has extra fields
+                    $relation = $model->changerecords()->first();
+                    $relationName = $relation->field_name;
+                    if ($relation) {
+                        $object->$relationName()->syncWithoutDetaching([$relation->new_value]);
                     }
-                );
-
-                $object->update($attributes);
-            }
-            else if($model->changeset_type === ChangesetType::DELETE)
-            {
-                $object->delete();
+                    break;
+                case ChangesetType::DETACH:
+                    $relation = $model->changerecords()->first();
+                    $relationName = $relation->field_name;
+                    if ($relation) {
+                        $object->$relationName()->detach($relation->new_value);
+                    }
+                    break;
+                default: break;
             }
         }
     }

@@ -14,9 +14,15 @@ class AddStatusAndVersionToChangesetsTable extends Migration
     public function up()
     {
         Schema::table('changesets', function (Blueprint $table) {
-            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');;
+            $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
             $table->unsignedInteger('version')->default(1);
         });
+
+
+        DB::statement(
+            "ALTER TABLE changesets MODIFY COLUMN changeset_type ENUM('I','U','D','AT','DT')"
+        );
+
     }
 
     /**
@@ -30,5 +36,10 @@ class AddStatusAndVersionToChangesetsTable extends Migration
             $table->dropColumn('status');
             $table->dropColumn('version');
         });
+
+        DB::statement(
+            "ALTER TABLE changesets MODIFY COLUMN changeset_type ENUM('I','U','D')"
+        );
+
     }
 }

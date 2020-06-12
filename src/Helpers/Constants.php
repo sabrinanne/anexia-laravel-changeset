@@ -7,6 +7,8 @@ class ChangesetType
     public const INSERT = 'I';
     public const UPDATE = 'U';
     public const DELETE = 'D';
+    public const ATTACH = 'AT';
+    public const DETACH = 'DT';
 }
 
 class ChangesetTypeLong
@@ -14,6 +16,8 @@ class ChangesetTypeLong
     public const INSERT = 'Insert';
     public const UPDATE = 'Update';
     public const DELETE = 'Delete';
+    public const ATTACH = 'Attach';
+    public const DETACH = 'Detach';
 }
 
 class ChangesetStatus
